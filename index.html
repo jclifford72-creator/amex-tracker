@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Amex Tracker</title>
+<meta name="theme-color" content="#6346dc">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Amex Tracker">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="favicon-32.png">
+<style>
+  html,body{margin:0;height:100%;background:#ece8fb;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,sans-serif;color:#241a52;}
+  #app{position:fixed;inset:0;width:100%;height:100%;border:0;display:none;background:#fff;}
+  .screen{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px;text-align:center;box-sizing:border-box;}
+  .screen img{width:96px;height:96px;border-radius:22px;box-shadow:0 10px 30px rgba(60,30,140,.25);}
+  h1{font-size:22px;margin:18px 0 6px;}
+  p{font-size:15px;line-height:1.45;color:#5b5480;margin:6px 0;max-width:360px;}
+  input{width:100%;max-width:380px;font-size:16px;padding:13px 14px;border:1.5px solid #c9bff0;border-radius:12px;margin:14px 0 10px;box-sizing:border-box;background:#fff;color:#241a52;}
+  button,.btn{display:inline-block;font-size:16px;font-weight:600;padding:13px 22px;border-radius:12px;border:0;background:#6346dc;color:#fff;text-decoration:none;cursor:pointer;width:100%;max-width:380px;box-sizing:border-box;}
+  .link{background:none;color:#6346dc;width:auto;padding:10px;font-size:14px;}
+  .err{color:#c0392b;font-size:14px;min-height:20px;}
+  .spin{width:28px;height:28px;border:3px solid #ded7f7;border-top-color:#6346dc;border-radius:50%;animation:s 0.9s linear infinite;margin-top:22px;}
+  @keyframes s{to{transform:rotate(360deg)}}
+  #slow{display:none;margin-top:18px;}
+</style>
+</head>
+<body>
+
+<!-- First-run: paste your Apps Script link (stored only on this phone, never in GitHub) -->
+<div class="screen" id="setup" style="display:none">
+  <img src="icon-192.png" alt="">
+  <h1>Connect Amex Tracker</h1>
+  <p>Paste your Apps Script web app link (the working one ending in <b>/exec</b>). It's saved on this phone only.</p>
+  <input id="url" type="url" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://script.google.com/a/~/macros/s/…/exec">
+  <div class="err" id="err"></div>
+  <button id="save" type="button">Connect</button>
+</div>
+
+<!-- Loading splash -->
+<div class="screen" id="loading" style="display:none">
+  <img src="icon-192.png" alt="">
+  <div class="spin"></div>
+  <div id="slow">
+    <p>Taking a while?</p>
+    <a class="btn" id="direct" target="_blank" rel="noopener">Open the tracker directly</a>
+    <button class="link" type="button" onclick="resetLink()">Change link</button>
+  </div>
+</div>
+
+<iframe id="app" title="Amex Tracker" allow="clipboard-write"></iframe>
+
+<script>
+  var KEY = 'amexTrackerAppUrl';
+  function valid(u) { return /^https:\/\/script\.google\.com\/.+\/exec(\?.*)?$/.test(u); }
+  function show(id) { ['setup', 'loading'].forEach(function (s) { document.getElementById(s).style.display = s === id ? 'flex' : 'none'; }); }
+  function resetLink() { localStorage.removeItem(KEY); location.hash = ''; location.reload(); }
+
+  function launch(u) {
+    show('loading');
+    document.getElementById('direct').href = u;
+    var frame = document.getElementById('app'), done = false;
+    var slow = setTimeout(function () { if (!done) document.getElementById('slow').style.display = 'block'; }, 12000);
+    frame.onload = function () { done = true; clearTimeout(slow); frame.style.display = 'block'; show(null); };
+    frame.src = u;
+  }
+
+  document.getElementById('save').onclick = function () {
+    var u = document.getElementById('url').value.trim();
+    if (!valid(u)) { document.getElementById('err').textContent = 'That doesn\u2019t look like an Apps Script /exec link.'; return; }
+    localStorage.setItem(KEY, u); launch(u);
+  };
+  document.getElementById('url').addEventListener('keydown', function (e) { if (e.key === 'Enter') document.getElementById('save').click(); });
+
+  // Visit  .../#reset  to change the saved link.
+  if (location.hash === '#reset') resetLink();
+  var saved = localStorage.getItem(KEY);
+  if (saved && valid(saved)) launch(saved); else show('setup');
+
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(function () {});
+</script>
+</body>
+</html>
